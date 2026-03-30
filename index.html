@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Obi Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0e0f;
+    --surface: #161718;
+    --surface2: #1e1f21;
+    --border: #2a2b2d;
+    --border2: #333436;
+    --text: #e8e9ea;
+    --text-dim: #7a7b7d;
+    --text-muted: #4a4b4d;
+    --accent: #e8ff47;
+    --accent-dim: rgba(232,255,71,0.1);
+    --accent-dim2: rgba(232,255,71,0.06);
+    --red: #ff4d4d;
+    --red-dim: rgba(255,77,77,0.1);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.1);
+    --orange: #f97316;
+  }
+
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; font-size: 14px; }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px; min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+  .logo-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 500; color: var(--accent); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 4px; }
+  .logo-name { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: .02em; text-transform: uppercase; }
+
+  .sidebar-nav { padding: 16px 0; flex: 1; }
+  .nav-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-muted); letter-spacing: .12em; padding: 0 20px; margin-bottom: 6px; margin-top: 12px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; cursor: pointer;
+    color: var(--text-dim); font-size: 13px; font-weight: 400;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim2); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 2px; }
+
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-muted); line-height: 1.8; }
+  .sidebar-footer span { color: var(--text-dim); }
+
+  /* ── MAIN ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .topbar-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  .topbar-meta span { color: var(--accent); }
+
+  .content { padding: 28px; flex: 1; }
+
+  /* ── STAT CARDS ── */
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 18px 20px; position: relative; overflow: hidden; transition: border-color .2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:var(--accent); opacity:0; transition:opacity .2s; }
+  .stat-card:hover::before { opacity:1; }
+  .stat-card.alert { border-color: rgba(255,77,77,.3); background: rgba(255,77,77,.04); }
+  .stat-card.alert::before { background:var(--red); opacity:1; }
+  .stat-icon { position:absolute; top:16px;right:16px; font-size:22px; opacity:.15; }
+  .stat-label { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:500; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; }
+  .stat-value { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:700; line-height:1; letter-spacing:-.01em; }
+  .stat-value.alert-text { color:var(--red); }
+  .stat-sub { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-muted); margin-top:6px; }
+
+  /* ── PANEL ── */
+  .panel { background:var(--surface); border:1px solid var(--border); margin-bottom:20px; }
+  .panel-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .panel-head-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:500; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; }
+  .panel-body { padding:20px; }
+
+  /* ── FORM ── */
+  .form-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:10px; align-items:end; }
+  .form-field { display:flex; flex-direction:column; gap:5px; }
+  .form-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
+  .form-input {
+    background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:9px 12px; font-family:'Barlow',sans-serif; font-size:13px; outline:none;
+    transition:border-color .15s; width:100%;
+  }
+  .form-input:focus { border-color:var(--accent); }
+  .form-input::placeholder { color:var(--text-muted); }
+
+  /* ── BUTTONS ── */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500; letter-spacing:.05em; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
+  .btn-primary { background:var(--accent); color:#0d0e0f; }
+  .btn-primary:hover { background:#d4eb3f; }
+  .btn-danger { background:transparent; color:var(--red); border:1px solid rgba(255,77,77,.2); padding:5px 10px; font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer; transition:all .15s; }
+  .btn-danger:hover { background:var(--red-dim); }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { border-bottom:1px solid var(--border); }
+  th { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:500; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; padding:8px 12px; text-align:left; white-space:nowrap; }
+  td { padding:12px; vertical-align:middle; border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:none; }
+  tbody tr { transition:background .1s; }
+  tbody tr:hover { background:var(--surface2); }
+  .td-name { font-weight:500; }
+  .td-sku { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); }
+  .td-qty { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; }
+  .td-price { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); }
+
+  /* ── BADGES ── */
+  .badge { display:inline-flex; align-items:center; padding:3px 8px; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  .badge-ok { background:var(--green-dim); color:var(--green); }
+  .badge-low { background:var(--red-dim); color:var(--red); }
+
+  /* ── STOCK CONTROLS ── */
+  .stock-controls { display:flex; align-items:center; gap:6px; }
+  .stock-input { width:52px; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:5px 8px; font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:center; outline:none; }
+  .stock-input:focus { border-color:var(--accent); }
+  .btn-in { background:var(--green-dim); color:var(--green); border:1px solid rgba(74,222,128,.2); padding:5px 10px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; transition:all .15s; }
+  .btn-in:hover { background:rgba(74,222,128,.2); }
+  .btn-out { background:rgba(249,115,22,.1); color:var(--orange); border:1px solid rgba(249,115,22,.2); padding:5px 10px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; transition:all .15s; }
+  .btn-out:hover { background:rgba(249,115,22,.2); }
+
+  /* ── MOVEMENT LOG ── */
+  .movement-list { display:flex; flex-direction:column; gap:2px; }
+  .movement-item { display:grid; grid-template-columns:110px 1fr auto auto; align-items:center; gap:16px; padding:10px 16px; border-left:2px solid var(--border); transition:all .15s; }
+  .movement-item:hover { background:var(--surface2); }
+  .mv-type { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  .mv-product { font-size:13px; }
+  .mv-qty { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; }
+  .mv-time { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-muted); white-space:nowrap; }
+  .empty-state { text-align:center; padding:32px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-muted); }
+
+  /* ── LOW STOCK BANNER ── */
+  .low-banner { background:rgba(255,77,77,.06); border:1px solid rgba(255,77,77,.2); border-left:3px solid var(--red); padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px; }
+  .low-banner-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--red); letter-spacing:.08em; font-weight:600; white-space:nowrap; }
+  .low-banner-items { font-size:12px; color:var(--text-dim); }
+  .low-banner-items strong { color:var(--text); }
+
+  /* ── QUICK STOCK GRID ── */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .quick-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); }
+  .quick-row:last-child { border-bottom:none; }
+  .quick-name { font-weight:500; font-size:13px; }
+  .quick-qty { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-muted); }
+
+  /* ── TABS (hidden, JS-driven) ── */
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* ── TOAST ── */
+  #toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    background:var(--surface2); border:1px solid var(--border2); border-left:3px solid var(--accent);
+    padding:12px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text);
+    min-width:260px; max-width:360px;
+    opacity:0; transform:translateY(8px); transition:all .2s; pointer-events:none;
+  }
+  #toast.show { opacity:1; transform:translateY(0); }
+  #toast.warn { border-left-color:var(--orange); }
+  #toast.error { border-left-color:var(--red); }
+
+  @media (max-width:900px) {
+    .stats { grid-template-columns:repeat(2,1fr); }
+    .two-col { grid-template-columns:1fr; }
+    .form-grid { grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-tag">v1.0 · Lagos</div>
+      <div class="logo-name">Obi Inventory</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard',this)">
+        <span class="nav-icon">◈</span> Dashboard
+        <span class="nav-badge" id="low-badge" style="display:none"></span>
+      </div>
+      <div class="nav-item" data-tab="products" onclick="switchTab('products',this)">
+        <span class="nav-icon">▦</span> Products
+      </div>
+      <div class="nav-item" data-tab="movements" onclick="switchTab('movements',this)">
+        <span class="nav-icon">↕</span> Movements
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      SYS STATUS<br/>
+      <span id="sys-status">ONLINE · 0 SKUs</span>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Overview</div>
+      <div class="topbar-meta" id="topbar-meta"></div>
+    </div>
+
+    <div class="content">
+      <!-- LOW STOCK BANNER -->
+      <div class="low-banner" id="low-banner" style="display:none">
+        <div class="low-banner-label">⚠ LOW STOCK</div>
+        <div class="low-banner-items" id="low-banner-items"></div>
+      </div>
+
+      <!-- DASHBOARD TAB -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-icon">▦</div>
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-sub" id="stat-units">0 total units</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">₦</div>
+            <div class="stat-label">Cost Value</div>
+            <div class="stat-value" id="stat-cost">₦0.00</div>
+            <div class="stat-sub">at cost price</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">↗</div>
+            <div class="stat-label">Retail Value</div>
+            <div class="stat-value" id="stat-retail">₦0.00</div>
+            <div class="stat-sub">potential revenue</div>
+          </div>
+          <div class="stat-card" id="stat-low-card">
+            <div class="stat-icon">⚠</div>
+            <div class="stat-label">Low Stock</div>
+            <div class="stat-value" id="stat-low">0</div>
+            <div class="stat-sub">below reorder level</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Quick stock -->
+          <div class="panel">
+            <div class="panel-head"><div class="panel-head-title">Quick Stock Update</div></div>
+            <div class="panel-body" id="quick-stock-list"></div>
+          </div>
+          <!-- Recent movements -->
+          <div class="panel">
+            <div class="panel-head"><div class="panel-head-title">Recent Activity</div></div>
+            <div class="panel-body">
+              <div class="movement-list" id="recent-movements">
+                <div class="empty-state">No movements recorded yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TAB -->
+      <div class="tab-content" id="tab-products">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-head-title">Add New Product</div></div>
+          <div class="panel-body">
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="form-label">Product Name</label>
+                <input class="form-input" id="f-name" placeholder="e.g. Fanta Orange" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">SKU</label>
+                <input class="form-input" id="f-sku" placeholder="DRK004" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Initial Qty</label>
+                <input class="form-input" id="f-qty" type="number" placeholder="0" min="0" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Unit Price (₦)</label>
+                <input class="form-input" id="f-price" type="number" placeholder="0.00" min="0" step="0.01" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary" onclick="addProduct()">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-head-title" id="prod-count">All Products — 0 items</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th><th>SKU</th><th>Qty</th>
+                  <th>Unit Price</th><th>Cost Price</th><th>Stock Value</th>
+                  <th>Status</th><th>Stock</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="product-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOVEMENTS TAB -->
+      <div class="tab-content" id="tab-movements">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-head-title" id="mv-count">Stock Movement Log — 0 entries</div>
+          </div>
+          <div class="panel-body">
+            <div class="movement-list" id="movements-list">
+              <div class="empty-state">No stock movements recorded.<br/>Update stock from the Products tab.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+let products = [
+  { id: '1', name: 'Coca Cola',     sku: 'DRK001', quantity: 20, unit_price: 2,   cost_price: 1,   reorder_level: 10 },
+  { id: '2', name: 'Pepsi Max',     sku: 'DRK002', quantity: 8,  unit_price: 2.5, cost_price: 1.2, reorder_level: 10 },
+  { id: '3', name: 'Mineral Water', sku: 'DRK003', quantity: 45, unit_price: 1.2, cost_price: 0.5, reorder_level: 15 },
+];
+let movements = [];
+
+const TYPE_COLORS = { stock_in:'#4ade80', stock_out:'#f97316', adjustment:'#60a5fa', return:'#c084fc' };
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const fmt = n => '₦' + Number(n).toLocaleString('en-NG', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmtTime = d => d ? d.toLocaleTimeString('en-NG', { hour:'2-digit', minute:'2-digit' }) : '';
+const lowStock = () => products.filter(p => p.quantity <= p.reorder_level);
+const totalCost = () => products.reduce((s,p)=>s+p.quantity*p.cost_price, 0);
+const totalRetail = () => products.reduce((s,p)=>s+p.quantity*p.unit_price, 0);
+const totalUnits = () => products.reduce((s,p)=>s+p.quantity, 0);
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type !== 'success' ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 2800);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+const TAB_TITLES = { dashboard:'Overview', products:'Products', movements:'Stock Movements' };
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = TAB_TITLES[id];
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() {
+  const low = lowStock();
+
+  // Topbar meta
+  document.getElementById('topbar-meta').innerHTML =
+    new Date().toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) +
+    ' &middot; <span>' + products.length + ' products</span>';
+
+  // Sidebar
+  document.getElementById('sys-status').textContent = 'ONLINE · ' + products.length + ' SKUs';
+  const badge = document.getElementById('low-badge');
+  badge.textContent = low.length;
+  badge.style.display = low.length > 0 ? '' : 'none';
+
+  // Low stock banner
+  const banner = document.getElementById('low-banner');
+  if (low.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('low-banner-items').innerHTML =
+      low.map(p => '<strong>' + p.name + '</strong> (' + p.quantity + ' left)').join(' · ');
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Stat cards
+  document.getElementById('stat-total').textContent = products.length;
+  document.getElementById('stat-units').textContent = totalUnits() + ' total units';
+  document.getElementById('stat-cost').textContent = fmt(totalCost());
+  document.getElementById('stat-retail').textContent = fmt(totalRetail());
+  document.getElementById('stat-low').textContent = low.length;
+  const lowCard = document.getElementById('stat-low-card');
+  const lowVal = document.getElementById('stat-low');
+  if (low.length > 0) { lowCard.classList.add('alert'); lowVal.classList.add('alert-text'); }
+  else { lowCard.classList.remove('alert'); lowVal.classList.remove('alert-text'); }
+
+  // Quick stock list
+  const qList = document.getElementById('quick-stock-list');
+  qList.innerHTML = products.map(p => `
+    <div class="quick-row">
+      <div>
+        <div class="quick-name">${p.name}</div>
+        <div class="quick-qty">${p.quantity} units</div>
+      </div>
+      <div class="stock-controls">
+        <input class="stock-input" id="si-${p.id}" type="number" min="1" placeholder="1" />
+        <button class="btn-in" onclick="handleBulkStock('${p.id}','stock_in')">IN</button>
+        <button class="btn-out" onclick="handleBulkStock('${p.id}','stock_out')">OUT</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Recent movements (dashboard)
+  const rm = document.getElementById('recent-movements');
+  if (movements.length === 0) {
+    rm.innerHTML = '<div class="empty-state">No movements recorded yet</div>';
+  } else {
+    rm.innerHTML = [...movements].reverse().slice(0,8).map(m => `
+      <div class="movement-item" style="border-left-color:${TYPE_COLORS[m.type]}">
+        <div class="mv-type" style="color:${TYPE_COLORS[m.type]}">${m.type.replace('_',' ')}</div>
+        <div class="mv-product">${m.product_name}</div>
+        <div class="mv-qty" style="color:${m.quantity>0?'var(--green)':'var(--orange)'}">
+          ${m.quantity>0?'+':''}${m.quantity}
+        </div>
+        <div class="mv-time">${fmtTime(m.time)}</div>
+      </div>
+    `).join('');
+  }
+
+  // Product table
+  document.getElementById('prod-count').textContent = 'All Products — ' + products.length + ' items';
+  const tbody = document.getElementById('product-tbody');
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td class="td-name">${p.name}</td>
+      <td class="td-sku">${p.sku}</td>
+      <td class="td-qty" style="color:${p.quantity<=p.reorder_level?'var(--red)':'var(--text)'}">${p.quantity}</td>
+      <td class="td-price">${fmt(p.unit_price)}</td>
+      <td class="td-price">${fmt(p.cost_price)}</td>
+      <td class="td-price">${fmt(p.quantity*p.cost_price)}</td>
+      <td><span class="badge ${p.quantity<=p.reorder_level?'badge-low':'badge-ok'}">${p.quantity<=p.reorder_level?'LOW':'OK'}</span></td>
+      <td>
+        <div class="stock-controls">
+          <input class="stock-input" id="sip-${p.id}" type="number" min="1" placeholder="1" />
+          <button class="btn-in" onclick="handleBulkStock('${p.id}','stock_in','sip-')">IN</button>
+          <button class="btn-out" onclick="handleBulkStock('${p.id}','stock_out','sip-')">OUT</button>
+        </div>
+      </td>
+      <td><button class="btn btn-danger" onclick="deleteProduct('${p.id}')">DEL</button></td>
+    </tr>
+  `).join('');
+
+  // Full movements log
+  document.getElementById('mv-count').textContent = 'Stock Movement Log — ' + movements.length + ' entries';
+  const mvList = document.getElementById('movements-list');
+  if (movements.length === 0) {
+    mvList.innerHTML = '<div class="empty-state">No stock movements recorded.<br/>Update stock from the Products tab.</div>';
+  } else {
+    mvList.innerHTML = [...movements].reverse().map(m => `
+      <div class="movement-item" style="border-left-color:${TYPE_COLORS[m.type]}">
+        <div class="mv-type" style="color:${TYPE_COLORS[m.type]}">${m.type.replace('_',' ')}</div>
+        <div class="mv-product">${m.product_name}</div>
+        <div class="mv-qty" style="color:${m.quantity>0?'var(--green)':'var(--orange)'}">
+          ${m.quantity>0?'+':''}${m.quantity} units
+        </div>
+        <div class="mv-time">${fmtTime(m.time)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function addProduct() {
+  const name  = document.getElementById('f-name').value.trim();
+  const sku   = document.getElementById('f-sku').value.trim();
+  const qty   = Number(document.getElementById('f-qty').value) || 0;
+  const price = Number(document.getElementById('f-price').value) || 0;
+  if (!name || !sku) { showToast('Name and SKU are required', 'error'); return; }
+  products.push({ id: Date.now().toString(), name, sku, quantity: qty, unit_price: price, cost_price: price * 0.6, reorder_level: 10 });
+  ['f-name','f-sku','f-qty','f-price'].forEach(id => document.getElementById(id).value = '');
+  showToast(name + ' added to inventory');
+  render();
+}
+
+function deleteProduct(id) {
+  const p = products.find(p => p.id === id);
+  products = products.filter(p => p.id !== id);
+  showToast((p?.name || 'Product') + ' removed', 'warn');
+  render();
+}
+
+function updateStock(id, change, type) {
+  const p = products.find(p => p.id === id);
+  if (!p) return;
+  const newQty = p.quantity + change;
+  if (newQty < 0) { showToast('Stock cannot go below 0', 'error'); return; }
+  p.quantity = newQty;
+  movements.push({ product_name: p.name, quantity: change, type, time: new Date() });
+  showToast(p.name + ' — ' + type.replace('_',' ') + ' (' + (change>0?'+':'')+change+')');
+  render();
+}
+
+function handleBulkStock(id, type, prefix='si-') {
+  const input = document.getElementById(prefix + id);
+  const qty = Math.abs(Number(input?.value || 1)) || 1;
+  updateStock(id, type === 'stock_in' ? qty : -qty, type);
+  if (input) input.value = '';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
